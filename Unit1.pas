@@ -23,9 +23,18 @@ type
     procedure btnTestBcdAdoClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
+    FTestField: string;
+    FTestTable: string;
+    procedure AddInvitationMessage;
+    procedure EnsureTestTableExists;
+    procedure InitializeAdoConnection;
+    procedure InitializeFDacConnection;
+    procedure SetupTableComponents;
     procedure TestBCD(const ATable: TDataSet);
     { Private declarations }
   public
+    property TestField: string read FTestField write FTestField;
+    property TestTable: string read FTestTable write FTestTable;
     { Public declarations }
   end;
 
@@ -39,17 +48,43 @@ uses
 
 {$R *.dfm}
 
-procedure TForm1.btnBcdTestFDacClick(Sender: TObject);
-begin
-  TestBCD(TableFireDac);
-end;
-
-procedure TForm1.btnTestBcdAdoClick(Sender: TObject);
-begin
-  TestBCD(TableAdo);
-end;
-
 procedure TForm1.FormCreate(Sender: TObject);
+begin
+  AddInvitationMessage();
+  InitializeAdoConnection;
+  EnsureTestTableExists();
+  InitializeFDacConnection;
+  SetupTableComponents();
+end;
+
+procedure TForm1.AddInvitationMessage;
+const
+  description_message =
+    'Hi, the bug appears when you have Windows regional settings: dot as grouping symbol and comma as decimal sepearator';
+  affected_message: array[Boolean] of string = ('NOT AFFECTED', 'AFFECTED');
+var
+  systemIsAffected: Boolean;
+begin
+  mmLog.Lines.Add(description_message);
+  mmLog.Lines.Add(Format('  Your grouping symbol: %s', [QuotedStr(FormatSettings.ThousandSeparator)]));
+  mmLog.Lines.Add(Format('  Your decimal separator: %s', [QuotedStr(FormatSettings.DecimalSeparator)]));
+
+  systemIsAffected :=
+    SameText(FormatSettings.ThousandSeparator, '.') and
+    SameText(FormatSettings.DecimalSeparator, ',');
+
+  mmLog.Lines.Add('This system should be '+ affected_message[systemIsAffected]);
+end;
+
+procedure TForm1.InitializeFDacConnection;
+begin
+  conFDac.DriverName := 'MSAcc';
+  conFDac.Params.AddPair('Database','.\TestBase.mdb');
+  conFDac.Connected := True;
+  TableFireDac.Connection := conFDac;
+end;
+
+procedure TForm1.InitializeAdoConnection;
 begin
   conAdo.ConnectionString :=
     'Provider=Microsoft.Jet.OLEDB.4.0;'+
@@ -58,17 +93,39 @@ begin
     'Persist Security Info=False;';
   conAdo.Connected := True;
   TableAdo.Connection := conAdo;
+end;
 
-  conFDac.DriverName := 'MSAcc';
-  conFDac.Params.AddPair('Database','.\TestBase.mdb');
-  conFDac.Connected := True;
-  TableFireDac.Connection := conFDac;
+procedure TForm1.EnsureTestTableExists;
+var
+  dummy: Integer;
+  tables: TStringList;
+begin
+  TestTable := 'test_table';
+  TestField := 'test_field';
+
+  tables := TStringList.Create;
+  tables.Sorted := true;
+  try
+    conAdo.GetTableNames(tables);
+    if tables.Find(TestTable, dummy) then
+      conAdo.Execute(format('drop table %s', [TestTable]));
+    conAdo.Execute(format('create table %s (%s decimal(15,3))', [TestTable, TestField]));
+  finally
+    tables.Free;
+  end;
+end;
+
+procedure TForm1.SetupTableComponents;
+begin
+  TableAdo.TableName := TestTable;
+  TableFireDac.TableName := TestTable;
 end;
 
 procedure TForm1.TestBCD(const ATable: TDataSet);
 var
   doubleValue: Double;
   bcd, normalizedBcd: TBCD;
+  postedValue, reloadedValue: string;
 begin
   mmLog.Lines.Add('');
   mmLog.Lines.Add(ATable.Name);
@@ -84,18 +141,28 @@ begin
 
   ATable.Open;
   ATable.Insert;
-  ATable['PROD'] := DateTimeToStr(Now);
-  ATable.FieldByName('QTY').AsBCD := normalizedBcd;
-  ATable['KG'] := 0;
-  ATable['DEFAULT'] := 0;
+  ATable.FieldByName(TestField).AsBCD := normalizedBcd;
   ATable.Post;
-  mmLog.Lines.Add('Posted: '+ATable.FieldByName('QTY').AsString);
+  postedValue := ATable.FieldByName(TestField).AsString;
+  mmLog.Lines.Add('Posted: ' + postedValue);
 
   ATable.Close;
   ATable.Open;
   ATable.Last;
-  mmLog.Lines.Add('Reloaded: '+ATable.FieldByName('QTY').AsString);
+  reloadedValue := ATable.FieldByName(TestField).AsString;
+  mmLog.Lines.Add('Reloaded: '+reloadedValue);
+
+  Assert(reloadedValue.Equals(postedValue), 'Reloaded value is not equal to posted.');
 end;
 
+procedure TForm1.btnBcdTestFDacClick(Sender: TObject);
+begin
+  TestBCD(TableFireDac);
+end;
+
+procedure TForm1.btnTestBcdAdoClick(Sender: TObject);
+begin
+  TestBCD(TableAdo);
+end;
 
 end.
