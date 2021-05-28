@@ -79,7 +79,7 @@ end;
 procedure TForm1.InitializeFDacConnection;
 begin
   conFDac.DriverName := 'MSAcc';
-  conFDac.Params.AddPair('Database','.\TestBase.mdb');
+  conFDac.Params.Database := '.\TestBase.mdb';
   conFDac.Connected := True;
   TableFireDac.Connection := conFDac;
 end;
