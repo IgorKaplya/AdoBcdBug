@@ -38,7 +38,24 @@ object Form1: TForm1
     Height = 25
     Caption = ' BCD Test FDac'
     TabOrder = 2
-    OnClick = btnBcdTestFDacClick
+  end
+  object btnSimpleAdo: TButton
+    Left = 8
+    Top = 76
+    Width = 121
+    Height = 25
+    Caption = 'Simple ADO'
+    TabOrder = 3
+    OnClick = btnSimpleAdoClick
+  end
+  object btnSimpleFDac: TButton
+    Left = 8
+    Top = 107
+    Width = 121
+    Height = 25
+    Caption = 'Simple FDac'
+    TabOrder = 4
+    OnClick = btnSimpleFDacClick
   end
   object conFDac: TFDConnection
     Params.Strings = (
@@ -55,9 +72,20 @@ object Form1: TForm1
     Top = 144
   end
   object conAdo: TADOConnection
+    ConnectionString = 
+      'Provider=Microsoft.ACE.OLEDB.12.0;User ID=Admin;Data Source=C:\U' +
+      'sers\igor.kaplya\Desktop\AdoBcdBug\Win32\Debug\TestVBA_OtherBase' +
+      '.mdb;Mode=ReadWrite;Persist Security Info=False;Jet OLEDB:System' +
+      ' database="";Jet OLEDB:Registry Path="";Jet OLEDB:Database Passw' +
+      'ord="";Jet OLEDB:Engine Type=5;Jet OLEDB:Database Locking Mode=1' +
+      ';Jet OLEDB:Global Partial Bulk Ops=2;Jet OLEDB:Global Bulk Trans' +
+      'actions=1;Jet OLEDB:New Database Password="";Jet OLEDB:Create Sy' +
+      'stem Database=False;Jet OLEDB:Encrypt Database=False;Jet OLEDB:D' +
+      'on'#39't Copy Locale on Compact=False;Jet OLEDB:Compact Without Repl' +
+      'ica Repair=False;Jet OLEDB:SFP=False;Jet OLEDB:Support Complex D' +
+      'ata=False'
     LoginPrompt = False
-    Mode = cmReadWrite
-    Provider = 'Microsoft.Jet.OLEDB.4.0'
+    Provider = 'Microsoft.ACE.OLEDB.12.0'
     Left = 16
     Top = 200
   end

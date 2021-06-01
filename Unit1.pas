@@ -19,7 +19,10 @@ type
     TableAdo: TADOTable;
     btnTestBcdAdo: TButton;
     btnBcdTestFDac: TButton;
-    procedure btnBcdTestFDacClick(Sender: TObject);
+    btnSimpleAdo: TButton;
+    btnSimpleFDac: TButton;
+    procedure btnSimpleAdoClick(Sender: TObject);
+    procedure btnSimpleFDacClick(Sender: TObject);
     procedure btnTestBcdAdoClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
@@ -31,6 +34,7 @@ type
     procedure InitializeFDacConnection;
     procedure SetupTableComponents;
     procedure TestBCD(const ATable: TDataSet);
+    procedure TestSimple(const ATable: TDataSet);
     { Private declarations }
   public
     property TestField: string read FTestField write FTestField;
@@ -76,6 +80,16 @@ begin
   mmLog.Lines.Add('This system should be '+ affected_message[systemIsAffected]);
 end;
 
+procedure TForm1.btnSimpleAdoClick(Sender: TObject);
+begin
+  TestSimple(TableAdo);
+end;
+
+procedure TForm1.btnSimpleFDacClick(Sender: TObject);
+begin
+  TestSimple(TableFireDac);
+end;
+
 procedure TForm1.InitializeFDacConnection;
 begin
   conFDac.DriverName := 'MSAcc';
@@ -85,12 +99,19 @@ begin
 end;
 
 procedure TForm1.InitializeAdoConnection;
-begin
-  conAdo.ConnectionString :=
+const
+  ado_jet_connection_string =
     'Provider=Microsoft.Jet.OLEDB.4.0;'+
     'Data Source=TestBase.mdb;'+
     'Mode=ReadWrite;'+
     'Persist Security Info=False;';
+  ado_ace_connection_string =
+    'Provider=Microsoft.ACE.OLEDB.12.0;'+
+    'Data Source=TestBase.mdb;'+
+    'Mode=ReadWrite;'+
+    'Persist Security Info=False;';
+begin
+  conAdo.ConnectionString := ado_ace_connection_string;
   conAdo.Connected := True;
   TableAdo.Connection := conAdo;
 end;
@@ -128,7 +149,7 @@ var
   postedValue, reloadedValue: string;
 begin
   mmLog.Lines.Add('');
-  mmLog.Lines.Add(ATable.Name);
+  mmLog.Lines.Add('TestBCD: '+ATable.Name);
 
   doubleValue := 12.34567;
   mmLog.Lines.Add('Double: '+ doubleValue.ToString);
@@ -155,14 +176,36 @@ begin
   Assert(reloadedValue.Equals(postedValue), 'Reloaded value is not equal to posted.');
 end;
 
-procedure TForm1.btnBcdTestFDacClick(Sender: TObject);
-begin
-  TestBCD(TableFireDac);
-end;
-
 procedure TForm1.btnTestBcdAdoClick(Sender: TObject);
 begin
   TestBCD(TableAdo);
+end;
+
+procedure TForm1.TestSimple(const ATable: TDataSet);
+var
+  stringValue: String;
+  postedValue, reloadedValue: string;
+begin
+  mmLog.Lines.Add('');
+  mmLog.Lines.Add('TestSimple: '+ATable.Name);
+
+  stringValue := '12,345';
+  mmLog.Lines.Add('String: '+ stringValue);
+
+  ATable.Open;
+  ATable.Insert;
+  ATable[TestField] := stringValue;
+  ATable.Post;
+  postedValue := ATable.FieldByName(TestField).AsString;
+  mmLog.Lines.Add('Posted: ' + postedValue);
+
+  ATable.Close;
+  ATable.Open;
+  ATable.Last;
+  reloadedValue := ATable.FieldByName(TestField).AsString;
+  mmLog.Lines.Add('Reloaded: '+reloadedValue);
+
+  Assert(reloadedValue.Equals(postedValue), 'Reloaded value is not equal to posted.');
 end;
 
 end.
